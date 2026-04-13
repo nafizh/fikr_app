@@ -2,7 +2,7 @@
 
 A self-hosted, AI-augmented bookmark manager. A personal Pinboard replacement, syncs across iPhone and browser, and quietly does the boring work of tagging and archiving in the background.
 
-Built end-to-end as a solo project using AI coding agents (Claude Code, Amp) as the primary collaborators — backend, web UI, iOS app + share extension, Chrome extension, and an iOS-Shortcut → Dropbox ingestion path. Roughly 8,000 lines of code across Python and Swift.
+Built end-to-end — backend, web UI, iOS app + share extension, Chrome extension, and an iOS-Shortcut → Dropbox ingestion path. Roughly 8,000 lines of python code.
 
 ---
 
