@@ -150,6 +150,7 @@ Makefile              `make run`, `make test`, `make fmt`
 
 ---
 
-## Status
 
-Personal project, used daily. Code is MIT — see [LICENSE](LICENSE) (add one if you fork). No public hosted instance; this is meant to run on your own Mac.
+## License
+This project is licensed under [CC BY-NC-4.0](https://creativecommons.org/licenses/by-nc/4.0/).  
+You may use it for personal, non-commercial purposes only.
