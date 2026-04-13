@@ -31,14 +31,12 @@ Built end-to-end as a solo project using AI coding agents (Claude Code, Amp) as 
 
 ## Why this repo exists
 
-I keep ~10,000 bookmarks. Pinboard was the right tool for ten years; its API got unreliable and there was no good replacement. So I built one — but treated the project as a deliberate exercise in **agent-collaboration discipline**, not just shipping a tool.
+I have ~5k bookmarks. Pinboard was the right tool for four years; But its developer has abandoned it. It also fails to capture content of X bookmarks which are a bulk of my bookmarks. So I built one for myself with all the features I always wanted.
 
 Two artifacts in this repo are the methodology, not the code:
 
 - [`AGENTS.md`](AGENTS.md) — a 21KB spec I hand to coding agents at the start of every session. It defines the architecture rules (Actions / Calculations / Data separation, functional core / imperative shell), the test discipline (BDD scenarios + unit tests for pure functions, contract tests at adapter boundaries), the refactoring patterns the agent is allowed to apply, and explicit "agent decision checklists" for ambiguous calls. The point is to give an LLM enough scaffolding that its output stays structurally consistent across sessions and across modules.
 - [`PLAN.md`](PLAN.md) and [`docs/IOS_APP_PLAN.md`](docs/IOS_APP_PLAN.md) — the planning artifacts produced *with* the agent before any code was written. Architecture decisions, tradeoffs, the specific data-rescue path off Pinboard. They're committed because they're part of the workflow, not afterthought docs.
-
-If you're hiring for agent-augmented delivery, the most useful thing in this repo is probably `AGENTS.md` — it's what made the codebase coherent across a dozen coding sessions.
 
 ---
 
