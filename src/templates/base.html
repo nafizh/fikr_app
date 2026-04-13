@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fikr</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo"><a href="/">Fikr</a></div>
+            <div class="search-bar">
+                <form action="/" method="get">
+                    <input type="text" name="q" placeholder="Search title, tags, content..." value="{{ q or '' }}" autofocus>
+                    <button type="submit">Search</button>
+                </form>
+            </div>
+        </header>
+
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer>
+        </footer>
+    </div>
+</body>
+</html>

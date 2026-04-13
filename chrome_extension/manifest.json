@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Fikr Extension",
+  "version": "1.0",
+  "description": "Save to Fikr",
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+  },
+  "permissions": ["activeTab", "scripting"],
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+B",
+        "mac": "Alt+B"
+      },
+      "description": "Save to Pinboard"
+    }
+  }
+}

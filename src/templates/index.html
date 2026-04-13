@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% if total_pages > 1 %}
+<div class="pagination" style="margin-top: 0; padding-top: 0; padding-bottom: 20px; border-top: none; border-bottom: 1px solid #eee; margin-bottom: 20px;">
+    {% set base_url = "?q=" + (q or "") + "&tag=" + (tag or "") %}
+    
+    {% if page > 1 %}
+        <a href="{{ base_url }}&page=1">First</a>
+        <a href="{{ base_url }}&page={{ page - 1 }}">Prev</a>
+    {% else %}
+        <span class="disabled">First</span>
+        <span class="disabled">Prev</span>
+    {% endif %}
+
+    {% for p in page_range %}
+        {% if p == page %}
+            <span class="current">{{ p }}</span>
+        {% else %}
+            <a href="{{ base_url }}&page={{ p }}">{{ p }}</a>
+        {% endif %}
+    {% endfor %}
+
+    {% if page < total_pages %}
+        <a href="{{ base_url }}&page={{ page + 1 }}">Next</a>
+        <a href="{{ base_url }}&page={{ total_pages }}">Last</a>
+    {% else %}
+        <span class="disabled">Next</span>
+        <span class="disabled">Last</span>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="bookmark-list">
+    <div class="meta-info">
+        Found {{ total_count }} bookmarks.
+        {% if q %} for query "<b>{{ q }}</b>"{% endif %}
+        {% if tag %} with tag "<b>{{ tag }}</b>"{% endif %}
+    </div>
+
+    {% for bookmark in bookmarks %}
+    <div class="bookmark">
+        <div class="bookmark-title">
+            <a href="{{ bookmark.url }}" target="_blank">
+                {% if bookmark.title_highlight %}
+                    {{ bookmark.title_highlight | safe }}
+                {% else %}
+                    {{ bookmark.title | default(bookmark.url) }}
+                {% endif %}
+            </a>
+        </div>
+
+        {% if bookmark.body_highlight %}
+        <div class="bookmark-snippet">
+            {{ bookmark.body_highlight | safe }}
+        </div>
+        {% elif bookmark.archive_content %}
+        <div class="bookmark-snippet">
+            {{ bookmark.archive_content | striptags | truncate(1000) }}
+        </div>
+        {% endif %}
+        
+        {% if bookmark.description or bookmark.desc_highlight %}
+        <div class="bookmark-desc">
+            {% if bookmark.desc_highlight %}
+                {{ bookmark.desc_highlight | safe }}
+            {% else %}
+                {{ bookmark.description }}
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="bookmark-url">
+            <a href="{{ bookmark.url }}" target="_blank">{{ bookmark.url }}</a>
+        </div>
+
+        <div class="bookmark-meta">
+            <span class="tags">
+                {% for t in bookmark.tags %}
+                <a href="/?tag={{ t }}">{{ t }}</a>
+                {% endfor %}
+            </span>
+            <span class="date">
+                {% if bookmark.updated_at and bookmark.updated_at != bookmark.created_at %}
+                    {{ bookmark.updated_at | timestamp }}
+                {% else %}
+                    {{ bookmark.created_at | timestamp }}
+                {% endif %}
+            </span>
+            <a href="/bookmark/{{ bookmark.id }}/edit" class="edit-link" style="text-decoration: none; color: #222;" title="Edit">✎</a>
+            <a href="#" class="delete-link" onclick="deleteBookmark({{ bookmark.id }}); return false;" style="color: #cc0000; margin-left: 5px;">delete</a>
+            <a href="#" class="refresh-link" onclick="refreshBookmark({{ bookmark.id }}, this); return false;" style="color: #228822; margin-left: 5px; text-decoration: none; font-size: 16px;" title="Force Re-archive (Fetch text again)">⟳</a>
+            <a href="/bookmark/{{ bookmark.id }}" style="margin-left: 10px; color: #666; font-size: 11px;">cached</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if total_pages > 1 %}
+<div class="pagination">
+    {% set base_url = "?q=" + (q or "") + "&tag=" + (tag or "") %}
+    
+    {% if page > 1 %}
+        <a href="{{ base_url }}&page=1">First</a>
+        <a href="{{ base_url }}&page={{ page - 1 }}">Prev</a>
+    {% else %}
+        <span class="disabled">First</span>
+        <span class="disabled">Prev</span>
+    {% endif %}
+
+    {% for p in page_range %}
+        {% if p == page %}
+            <span class="current">{{ p }}</span>
+        {% else %}
+            <a href="{{ base_url }}&page={{ p }}">{{ p }}</a>
+        {% endif %}
+    {% endfor %}
+
+    {% if page < total_pages %}
+        <a href="{{ base_url }}&page={{ page + 1 }}">Next</a>
+        <a href="{{ base_url }}&page={{ total_pages }}">Last</a>
+    {% else %}
+        <span class="disabled">Next</span>
+        <span class="disabled">Last</span>
+    {% endif %}
+</div>
+{% endif %}
+
+<script>
+async function refreshBookmark(id, el) {
+    if (el.classList.contains('spinning')) return;
+    
+    // Add visual feedback
+    el.innerHTML = "⟳"; 
+    el.classList.add('spinning');
+    el.style.opacity = "0.5";
+    
+    try {
+        const res = await fetch(`/api/refresh/${id}`, { method: 'POST' });
+        if (res.ok) {
+            // Success visual
+            el.innerHTML = "✓";
+            
+            // Store scroll position before reload
+            sessionStorage.setItem('scrollPosition', window.scrollY);
+            
+            setTimeout(() => window.location.reload(), 500);
+        } else {
+            alert("Refresh failed");
+            el.classList.remove('spinning');
+            el.style.opacity = "1";
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Error refreshing bookmark");
+        el.classList.remove('spinning');
+        el.style.opacity = "1";
+    }
+}
+
+// Restore scroll position on load if it exists
+window.addEventListener('load', () => {
+    const scrollPos = sessionStorage.getItem('scrollPosition');
+    if (scrollPos) {
+        window.scrollTo(0, parseInt(scrollPos));
+        sessionStorage.removeItem('scrollPosition');
+    }
+});
+
+async function deleteBookmark(id) {
+    if (!confirm("Are you sure you want to delete this bookmark?")) return;
+    
+    try {
+        const res = await fetch(`/api/delete?id=${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            window.location.reload();
+        } else {
+            alert("Failed to delete bookmark");
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Error deleting bookmark");
+    }
+}
+</script>
+{% endblock %}

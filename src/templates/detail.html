@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bookmark-detail">
+    <div class="bookmark-header">
+        <h1><a href="{{ bookmark.url }}" target="_blank">{{ bookmark.title }}</a></h1>
+        <div class="meta">
+            <a href="{{ bookmark.url }}" class="original-link" target="_blank">{{ bookmark.url }}</a>
+            <span class="separator">•</span>
+            <span class="date">Saved {{ bookmark.created_at | timestamp }}</span>
+            {% if bookmark.updated_at and bookmark.updated_at != bookmark.created_at %}
+            <span class="separator">•</span>
+            <span class="date">Updated {{ bookmark.updated_at | timestamp }}</span>
+            {% endif %}
+        </div>
+        <div class="tags">
+            {% for t in bookmark.tags %}
+            <a href="/?tag={{ t }}" class="tag">{{ t }}</a>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% if bookmark.description %}
+    <div class="description">
+        {{ bookmark.description }}
+    </div>
+    {% endif %}
+
+    <div class="archive-content">
+        {% if bookmark.archive_content %}
+            {{ bookmark.archive_content | replace('\n', '<br>') | safe }}
+        {% else %}
+            <p class="no-archive">No archived content available.</p>
+        {% endif %}
+    </div>
+    
+    <div class="actions" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+        <a href="/bookmark/{{ bookmark.id }}/edit" class="btn-link" style="color: #333; text-decoration: none;">✎ Edit Details</a>
+        <span style="margin: 0 10px; color: #ccc;">|</span>
+        <a href="#" onclick="deleteBookmark({{ bookmark.id }}); return false;" style="color: #cc0000;">Delete Bookmark</a>
+        <span style="margin: 0 10px; color: #ccc;">|</span>
+        <a href="#" onclick="refreshBookmark({{ bookmark.id }}, this); return false;" style="color: #228822;">Force Re-archive</a>
+    </div>
+</div>
+
+<script>
+async function deleteBookmark(id) {
+    if (!confirm("Are you sure you want to delete this bookmark?")) return;
+    try {
+        const res = await fetch(`/api/delete?id=${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            window.location.href = "/";
+        } else {
+            alert("Failed to delete");
+        }
+    } catch (e) {
+        alert("Error deleting");
+    }
+}
+
+async function refreshBookmark(id, el) {
+    if (el.textContent.includes('...')) return;
+    const originalText = el.textContent;
+    el.textContent = "Archiving...";
+    el.style.opacity = "0.5";
+    
+    try {
+        const res = await fetch(`/api/refresh/${id}`, { method: 'POST' });
+        if (res.ok) {
+            window.location.reload();
+        } else {
+            alert("Refresh failed");
+            el.textContent = originalText;
+            el.style.opacity = "1";
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Error refreshing");
+        el.textContent = originalText;
+        el.style.opacity = "1";
+    }
+}
+</script>
+
+<style>
+.bookmark-detail { max-width: 800px; margin: 0 auto; }
+.bookmark-header h1 { margin-bottom: 5px; font-size: 24px; }
+.bookmark-header h1 a { text-decoration: none; color: #222; }
+.bookmark-header h1 a:hover { color: #ef476f; }
+.meta { color: #666; font-size: 13px; margin-bottom: 15px; }
+.original-link { color: #006621; }
+.separator { margin: 0 5px; color: #ccc; }
+.tags .tag { 
+    display: inline-block; 
+    background: #f5f5f5; 
+    color: #555; 
+    padding: 2px 8px; 
+    border-radius: 4px; 
+    font-size: 12px; 
+    margin-right: 5px; 
+    text-decoration: none;
+}
+.tags .tag:hover { background: #e0e0e0; color: #333; }
+.description { 
+    background: #fff9c4; 
+    padding: 15px; 
+    border-radius: 4px; 
+    margin: 20px 0; 
+    font-style: italic;
+    color: #444;
+}
+.archive-content { 
+    font-family: "Georgia", serif; 
+    line-height: 1.6; 
+    font-size: 18px; 
+    color: #333; 
+    margin-top: 30px;
+}
+.no-archive { color: #999; font-style: italic; }
+</style>
+{% endblock %}

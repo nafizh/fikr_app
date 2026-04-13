@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bookmark-detail">
+    <div class="bookmark-header">
+        <h1>Edit Bookmark</h1>
+    </div>
+
+    <form method="POST" action="/bookmark/{{ bookmark.id }}/edit" class="edit-form">
+        <div class="form-group">
+            <label for="url">URL</label>
+            <input type="text" id="url" name="url" value="{{ bookmark.url }}" required class="form-control">
+        </div>
+
+        <div class="form-group">
+            <label for="title">Title</label>
+            <input type="text" id="title" name="title" value="{{ bookmark.title }}" class="form-control">
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" rows="4" class="form-control">{{ bookmark.description or '' }}</textarea>
+        </div>
+
+        <div class="form-group" style="position: relative;">
+            <label for="tags">Tags (space separated)</label>
+            <div class="tag-input-wrapper">
+                <input type="text" id="tags" name="tags" value="{{ bookmark.tags or '' }}" class="form-control" autocomplete="off">
+                <button type="button" id="suggest-btn" onclick="suggestTags()" class="btn btn-secondary" style="white-space: nowrap;">✨ AI Suggest</button>
+            </div>
+            
+            <!-- Autocomplete Dropdown -->
+            <div id="tag-autocomplete-list" class="autocomplete-items"></div>
+
+            <!-- AI Suggestions Area -->
+            <div id="ai-suggestions-area" style="display: none; margin-top: 10px; background: #f9f9f9; padding: 10px; border-radius: 4px; border: 1px solid #eee;">
+                <div style="font-size: 12px; color: #666; margin-bottom: 5px;">AI Suggestions (click to add):</div>
+                <div id="ai-tags-container" class="tags-container"></div>
+            </div>
+            
+            <div id="suggestion-status" class="status-text"></div>
+        </div>
+
+        <div class="actions" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="/" class="btn btn-link">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+// Pass all tags from backend to JS
+const ALL_TAGS = {{ all_tags | tojson }};
+
+// --- Autocomplete Logic ---
+const tagsInput = document.getElementById('tags');
+const autocompleteList = document.getElementById('tag-autocomplete-list');
+
+tagsInput.addEventListener('input', function(e) {
+    const val = this.value;
+    closeAllLists();
+    if (!val) return false;
+
+    // Get the current word being typed (last one)
+    const words = val.split(/\s+/);
+    const currentWord = words[words.length - 1].toLowerCase();
+    
+    if (!currentWord) return false;
+
+    // Filter tags matching the current word
+    const matches = ALL_TAGS.filter(tag => tag.toLowerCase().startsWith(currentWord) && tag !== currentWord);
+
+    if (matches.length === 0) return false;
+
+    // Create dropdown
+    matches.slice(0, 10).forEach(match => { // Limit to 10 suggestions
+        const b = document.createElement("DIV");
+        // Bold the matching part
+        b.innerHTML = "<strong>" + match.substr(0, currentWord.length) + "</strong>";
+        b.innerHTML += match.substr(currentWord.length);
+        b.innerHTML += "<input type='hidden' value='" + match + "'>";
+        
+        b.addEventListener("click", function(e) {
+            // Replace the last word with the selected tag
+            words.pop(); 
+            words.push(this.getElementsByTagName("input")[0].value);
+            tagsInput.value = words.join(" ") + " ";
+            closeAllLists();
+            tagsInput.focus();
+        });
+        autocompleteList.appendChild(b);
+    });
+});
+
+function closeAllLists() {
+    while (autocompleteList.firstChild) {
+        autocompleteList.removeChild(autocompleteList.firstChild);
+    }
+}
+
+// Close list when clicking outside
+document.addEventListener("click", function (e) {
+    if (e.target !== tagsInput) {
+        closeAllLists();
+    }
+});
+
+// --- AI Suggestion Logic ---
+async function suggestTags() {
+    const btn = document.getElementById('suggest-btn');
+    const status = document.getElementById('suggestion-status');
+    const aiArea = document.getElementById('ai-suggestions-area');
+    const aiContainer = document.getElementById('ai-tags-container');
+    
+    const url = document.getElementById('url').value;
+    const title = document.getElementById('title').value;
+    const description = document.getElementById('description').value;
+    
+    // Get existing tags
+    const currentTags = tagsInput.value.split(' ').map(t => t.trim()).filter(t => t);
+
+    btn.disabled = true;
+    status.textContent = "Asking AI...";
+    aiArea.style.display = 'none';
+    aiContainer.innerHTML = ''; // Clear previous
+    
+    try {
+        const res = await fetch('/api/suggest-tags', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                url: url,
+                title: title,
+                description: description,
+                existing_tags: currentTags
+            })
+        });
+
+        if (!res.ok) throw new Error("Failed to get suggestions");
+
+        const data = await res.json();
+        if (data.tags && data.tags.length > 0) {
+            aiArea.style.display = 'block';
+            status.textContent = `Found ${data.tags.length} suggestions.`;
+            
+            data.tags.forEach(tag => {
+                const tagBtn = document.createElement('span');
+                tagBtn.className = 'tag-chip';
+                tagBtn.textContent = tag;
+                tagBtn.onclick = () => addTag(tag, tagBtn);
+                aiContainer.appendChild(tagBtn);
+            });
+        } else {
+            status.textContent = "No new tags suggested.";
+        }
+    } catch (e) {
+        console.error(e);
+        status.textContent = "Error fetching suggestions.";
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function addTag(tag, btnElement) {
+    const currentVal = tagsInput.value.trim();
+    const currentTags = currentVal ? currentVal.split(/\s+/) : [];
+    
+    if (!currentTags.includes(tag)) {
+        currentTags.push(tag);
+        tagsInput.value = currentTags.join(" ") + " ";
+        
+        // Visual feedback
+        btnElement.style.background = "#d4edda";
+        btnElement.style.color = "#155724";
+        btnElement.style.borderColor = "#c3e6cb";
+        // Optional: remove it or disable it? Let's just mark it as added.
+    }
+}
+</script>
+
+<style>
+.bookmark-detail { max-width: 800px; margin: 0 auto; }
+.bookmark-header h1 { margin-bottom: 20px; font-size: 24px; color: #333; }
+
+.form-group { margin-bottom: 20px; }
+.form-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 14px; }
+.form-control { 
+    width: 100%; 
+    padding: 10px; 
+    border: 1px solid #ddd; 
+    border-radius: 4px; 
+    font-size: 16px;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+.form-control:focus { outline: none; border-color: #ef476f; }
+
+textarea.form-control { resize: vertical; }
+
+.tag-input-wrapper { display: flex; gap: 10px; position: relative; }
+.tag-input-wrapper input { flex-grow: 1; }
+
+/* Autocomplete Styles */
+.autocomplete-items {
+    position: absolute;
+    border: 1px solid #d4d4d4;
+    border-bottom: none;
+    border-top: none;
+    z-index: 99;
+    top: 100%;
+    left: 0;
+    right: 0; /* You might want to limit width to just the input */
+    width: calc(100% - 140px); /* Approximate width of input minus button */
+}
+
+.autocomplete-items div {
+    padding: 10px;
+    cursor: pointer;
+    background-color: #fff; 
+    border-bottom: 1px solid #d4d4d4;
+}
+
+.autocomplete-items div:hover {
+    background-color: #e9e9e9; 
+}
+
+.autocomplete-active {
+    background-color: DodgerBlue !important; 
+    color: #ffffff; 
+}
+
+/* Tag Chip Styles */
+.tags-container { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag-chip {
+    background: #e1f5fe;
+    color: #0277bd;
+    border: 1px solid #b3e5fc;
+    padding: 4px 10px;
+    border-radius: 16px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.tag-chip:hover {
+    background: #b3e5fc;
+}
+
+.btn { 
+    padding: 10px 20px; 
+    border: none; 
+    border-radius: 4px; 
+    cursor: pointer; 
+    font-size: 14px; 
+    text-decoration: none;
+    display: inline-block;
+}
+.btn-primary { background: #ef476f; color: white; }
+.btn-primary:hover { background: #d63f62; }
+
+.btn-secondary { background: #eee; color: #333; }
+.btn-secondary:hover { background: #e0e0e0; }
+
+.btn-link { color: #666; background: none; }
+.btn-link:hover { color: #333; text-decoration: underline; }
+
+.status-text { font-size: 12px; color: #666; margin-top: 5px; font-style: italic; }
+</style>
+{% endblock %}
