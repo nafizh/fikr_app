@@ -1,4 +1,4 @@
-# Fikr
+# Fikr (pronounced FICK-er)
 
 A self-hosted, AI-augmented bookmark manager. A personal Pinboard replacement, syncs across iPhone and browser, and quietly does the boring work of tagging and archiving in the background.
 
